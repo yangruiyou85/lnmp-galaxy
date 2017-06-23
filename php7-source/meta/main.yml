@@ -1,0 +1,21 @@
+---
+dependencies: []
+
+galaxy_info:
+  author: ruiyou.yang`
+  description: PHP7 from source. Optional php7-fpm, opcache
+  company: NA
+  license: license (GPLv2, CC-BY, etc)
+  min_ansible_version: 1.8
+  platforms:
+    - name: Ubuntu
+      versions:
+        - trusty
+  galaxy_tags:
+    - php
+    - php7
+    - source
+    - ubuntu
+    - debian
+    - fpm
+    - cli

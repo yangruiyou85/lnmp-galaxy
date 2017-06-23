@@ -1,0 +1,75 @@
+---
+- name: Include requirements
+  include: "{{role_path}}/tasks/install-from-source/requirements.yml"
+
+- name: Clone the PHP repository.
+  git:
+    repo: https://git.php.net/repository/php-src.git
+    dest: "{{ php_source_clone_dir }}"
+    version: "{{ php_source_version }}"
+    accept_hostkey: yes
+    depth: 1
+    force: yes
+
+- name: Ensure PHP installation path exists.
+  file:
+    path: "{{ php_source_install_path }}"
+    state: directory
+    mode: 0755
+
+- name: Check if gmp.h is already in a location accessible to gcc.
+  stat: path=/usr/include/gmp.h
+  register: gmp_file
+
+- name: Ensure gmp.h is symlinked into a location accessible to gcc.
+  file:
+    src: "{{ php_source_install_gmp_path }}"
+    dest: /usr/include/gmp.h
+    state: link
+  when: gmp_file.stat.exists == false
+
+# Compile below
+
+- name: Build configure script.
+  shell: >
+    ./buildconf --force
+    chdir={{ php_source_clone_dir }}
+
+- name: Run configure script.
+  shell: >
+    {{ php_source_configure_command }}
+    chdir={{ php_source_clone_dir }}
+
+- name: Make and install PHP.
+  shell: >
+    {{ item }}
+    chdir={{ php_source_clone_dir }}
+  with_items:
+    - "{{ php_source_make_command }}"
+    - make install
+  # make sure you ssh can handle long tasks. It can take up some time
+
+- name: Ensure php is executable (symlink)
+  file:
+    src: "{{ php_source_install_path }}/bin/php"
+    dest: /usr/bin/php
+    state: link
+  register: php_compile_success
+
+- name: Ensure phpize is executable (symlink)
+  file:
+    src: "{{ php_source_install_path }}/bin/phpize"
+    dest: /usr/bin/phpize
+    state: link
+
+# Copy default production php.ini
+
+- name: Copy production php.ini
+  command: cp {{ php_source_clone_dir }}/php.ini-production  {{ php_conf_paths }}/php.ini
+  when: php_compile_success|success
+
+# FPM BELOW
+
+- name: Include php-fpm installation (if enabled)
+  include: "{{ role_path }}/tasks/install-from-source/php-fpm.yml"
+  when: php_fpm_enable == true and php_compile_success|success
