@@ -1,0 +1,65 @@
+---
+- name: create {{ nginx_src_dir }} directory
+  file: path={{ nginx_src_dir }} state=directory
+
+- name: download nginx source
+  get_url: url=http://nginx.org/download/nginx-{{ nginx_version }}.tar.gz dest={{ nginx_src_dir }}/nginx-{{ nginx_version }}.tar.gz timeout=120
+
+- name: untar and defeather
+  unarchive: src={{ nginx_src_dir }}/nginx-{{ nginx_version }}.tar.gz dest={{ nginx_src_dir }} creates={{ nginx_src_dir }}/nginx-{{ nginx_version }} copy=no
+
+- name: install required yum packages
+  yum: name={{ item }} state=installed
+  with_items:
+    - net-snmp 
+    - net-snmp-utils
+    - gmp-devel 
+    - gcc 
+    - openssl-devel 
+    - readline-devel 
+    - expat-devel 
+    - libxml2-devel 
+    - freetds-devel 
+    - pcre-devel 
+    - automake 
+    - autoconf 
+    - libtool 
+    - make 
+    - gcc 
+    - perl
+
+- command: "{{ nginx_prefix }}/sbin/nginx -v"
+  register: result
+  ignore_errors: true
+
+- name: install nginx
+  command: chdir={{ nginx_src_dir }}/nginx-{{ nginx_version }} {{ item }}
+  with_items:
+  - ./configure --prefix={{ nginx_prefix }} --with-http_ssl_module --with-http_stub_status_module
+  - make install
+  when: "'{{ nginx_version }}' not in result.stderr or result is undefined"
+
+- name: Create symlink to nginx.conf
+  file: src={{ nginx_conf }} dest={{ nginx_prefix }}/conf/nginx.conf state=link force=yes
+  notify: restart nginx
+
+- name: write init.d/nginx
+  template: src=init_nginx.j2 dest=/etc/init.d/nginx mode=0755
+  
+- name: create log directory
+  file: path=/var/log/nginx state=directory group=mbxapp
+
+- name: Create symlink for logs
+  file: src=/var/log/nginx/ dest={{ nginx_prefix }}/logs state=link force=yes group=mbxapp
+
+- name: write /etc/snmp/nginx-stats  
+  template: src=nginx-stats.j2 dest=/etc/snmp/nginx-stats mode=0755
+
+- name: make sure snmp has nginx line
+  lineinfile: dest=/etc/snmp/snmpd.conf line='extend nginx /etc/snmp/nginx-stats' state=present insertafter=EOF
+    
+- name: service snmp started and enabled
+  service: name=snmpd state=started enabled=yes
+    
+- name: service nginx started and enabled
+  service: name=nginx state=started enabled=yes

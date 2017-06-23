@@ -1,0 +1,6 @@
+---
+# vars file for nginx_source
+nginx_prefix: /usr/local/nginx
+nginx_version: 1.9.5
+nginx_src_dir: /data/softs
+nginx_conf: /usr/local/nginx/conf
