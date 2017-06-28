@@ -1,0 +1,27 @@
+galaxy_info:
+  author: Sam Doran
+  description: Install GitLab CE Omnibus
+  company: Ansible by Red Hat
+  license: MIT
+  min_ansible_version: 2.1
+
+  platforms:
+  - name: EL
+    versions:
+      - 6
+      - 7
+
+  - name: Debian
+    versions:
+      - jessie
+
+  - name: Ubuntu
+    versions:
+      - precise
+      - trusty
+
+  categories:
+    - development
+    - git
+
+dependencies: []

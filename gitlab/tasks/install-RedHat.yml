@@ -1,0 +1,32 @@
+- name: RHEL | Install GitLab GPG key
+  rpm_key:
+    state: present
+    key: https://packages.gitlab.com/gpg.key
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - gitlab
+    - gitlab-gpg
+
+- name: RHEL | Install support packages
+  yum:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - curl
+    - "{{ gitlab_smtp_service }}"
+    - cronie
+  tags:
+    - gitlab
+    - gitlab-packages
+
+- name: RHEL | Install GitLab CE
+  yum:
+    name: gitlab-ce{{ '-' + gitlab_version if gitlab_version is defined else '' }}
+    state: "{{ 'present' if gitlab_version is defined else 'latest' }}"
+  notify:
+    - upgrade gitlab
+    - restart gitlab
+    - wait for unicorn
+  tags:
+    - gitlab
+    - gitlab-update
